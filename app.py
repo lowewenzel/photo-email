@@ -3,6 +3,10 @@
 # https://github.com/sendgrid/sendgrid-python
 import sendgrid
 import os
+import time
+import logging
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 from email_validator import validate_email, EmailNotValidError
 from sendgrid.helpers.mail import *
 
@@ -14,6 +18,8 @@ class PhotoSubject():
         self.files = []
 
 running = True
+subjects = []
+
 
 def send_email():
     sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
@@ -46,8 +52,14 @@ def create_subject():
     new_user = PhotoSubject(user_name, user_email)
     return new_user
 
+
+class FileHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        print(event.src_path[6:])
+        subjects[-1].files.append(event.src_path[6:])
+        print(subjects[-1].files)
+
 def main():
-    subjects = []
     while running:
         os.system('clear')
         print("Wenzel's photo-email script!\n\n")
@@ -57,13 +69,26 @@ def main():
         print("Wenzel's photo-email script!\n\n")
         print(subjects[-1].name)
         print(subjects[-1].email)
+        print("\nGet ready to smile!\n\n")
 
+        path = './img'
+        observer = Observer()
+        handler = FileHandler()
+        observer.schedule(handler, path, recursive=True)
+        observer.start()
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            observer.stop()
+        observer.join()
+        input("Press enter to start new subject\n")  # hold
         file = open("subjects.txt", "a")
         file.write("\n" + subjects[-1].name + "\n")
         file.write(subjects[-1].email + "\n")
-        file.write("")
-
-        input("\n\nGet ready to smile!\n\n\n\n\n\n\nPress enter to start new subject\n")  # hold
+        for i in subjects[-1].files:
+            file.write(i + "\n")
+        file.close()
 
 
 
